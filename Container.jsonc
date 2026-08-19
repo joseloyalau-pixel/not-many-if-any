@@ -1,0 +1,24 @@
+{
+  "name": "Container",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "Container Name",
+      "description": "e.g. Garage Bin A, Yarraville Box 12"
+    },
+    "code": {
+      "type": "string",
+      "title": "Container Code",
+      "description": "Short code encoded in the QR label"
+    },
+    "storage_location": {
+      "type": "string",
+      "title": "Storage Location",
+      "enum": [
+        "Garage",
+        "Bedroom",
+        "Caravan",
+        "Sunshine Storage",
+        "Yarraville Storage"
+      ]

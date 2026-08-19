@@ -1,0 +1,57 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import Stripe from 'npm:stripe@14.21.0';
+import { secrets } from 'base44:runtime';
+
+export default async function(req) {
+  let event;
+  try {
+    const stripe = new Stripe(secrets.get('STRIPE_SECRET_KEY'));
+    const sig = req.headers.get('stripe-signature');
+    const rawBody = await req.text();
+    event = await stripe.webhooks.constructEventAsync(
+      rawBody,
+      sig,
+      secrets.get('STRIPE_WEBHOOK_SECRET')
+    );
+  } catch (error) {
+    console.error('stripeWebhook signature error:', error.message);
+    return Response.json({ error: 'Invalid signature' }, { status: 400 });
+  }
+
+  try {
+    const base44 = createClientFromRequest(req);
+
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const inventoryIds = JSON.parse(session.metadata?.inventory_ids || '[]');
+      const buyerEmail = session.customer_details?.email || session.customer_email || '';
+      const total = session.amount_total ? session.amount_total / 100 : 0;
+
+      for (const id of inventoryIds) {
+        try {
+          const inv = await db.asServiceRole.entities.Inventory.get(id);
+          if (!inv) continue;
+          await db.asServiceRole.entities.Inventory.update(id, { status: 'Sold' });
+          await db.asServiceRole.entities.Sale.create({
+            inventory_id_ref: id,
+            sku: inv.sku || '',
+            title: inv.title,
+            sale_platform: 'Jose Loyal Website',
+            final_price: inv.sale_price || total,
+            purchase_price: inv.purchase_price || null,
+            buyer_email: buyerEmail,
+          });
+        } catch (e) {
+          console.error('Sale record error for', id, e.message);
+        }
+      }
+    }
+
+    return Response.json({ received: true });
+  } catch (error) {
+    console.error('stripeWebhook error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

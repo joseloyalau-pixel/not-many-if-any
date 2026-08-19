@@ -1,0 +1,64 @@
+{
+  "name": "Sale",
+  "type": "object",
+  "properties": {
+    "inventory_id_ref": {
+      "type": "string",
+      "title": "Inventory Item ID"
+    },
+    "sku": {
+      "type": "string",
+      "title": "SKU"
+    },
+    "title": {
+      "type": "string",
+      "title": "Item Title"
+    },
+    "sale_platform": {
+      "type": "string",
+      "title": "Sale Platform",
+      "enum": [
+        "Jose Loyal Website",
+        "eBay",
+        "Facebook Marketplace",
+        "Depop",
+        "Etsy",
+        "Shopify",
+        "Wix",
+        "In-Store"
+      ]
+    },
+    "final_price": {
+      "type": "number",
+      "title": "Final Price"
+    },
+    "purchase_price": {
+      "type": "number",
+      "title": "Purchase Price"
+    },
+    "shipping_provider": {
+      "type": "string",
+      "title": "Shipping Provider",
+      "enum": [
+        "Australia Post",
+        "Manual",
+        "Pickup"
+      ]
+    },
+    "tracking_number": {
+      "type": "string",
+      "title": "Tracking Number"
+    },
+    "buyer_email": {
+      "type": "string",
+      "title": "Buyer Email"
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

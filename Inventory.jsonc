@@ -1,0 +1,191 @@
+{
+  "name": "Inventory",
+  "type": "object",
+  "properties": {
+    "inventory_id": {
+      "type": "string",
+      "title": "Inventory ID",
+      "description": "Auto-generated sequential inventory ID"
+    },
+    "sku": {
+      "type": "string",
+      "title": "SKU",
+      "description": "Auto-generated unique SKU"
+    },
+    "barcode": {
+      "type": "string",
+      "title": "Barcode / QR Code"
+    },
+    "title": {
+      "type": "string",
+      "title": "Title"
+    },
+    "brand": {
+      "type": "string",
+      "title": "Brand"
+    },
+    "category": {
+      "type": "string",
+      "title": "Category",
+      "enum": [
+        "Apparel",
+        "Sneakers",
+        "Footwear",
+        "Collectibles",
+        "Homewares",
+        "Vintage",
+        "Accessories",
+        "One-of-One"
+      ]
+    },
+    "subcategory": {
+      "type": "string",
+      "title": "Subcategory"
+    },
+    "description": {
+      "type": "string",
+      "title": "Description",
+      "format": "textarea"
+    },
+    "condition_grade": {
+      "type": "string",
+      "title": "Condition Grade",
+      "description": "e.g. 9/10 - Excellent"
+    },
+    "colour": {
+      "type": "string",
+      "title": "Colour"
+    },
+    "size": {
+      "type": "string",
+      "title": "Size"
+    },
+    "material": {
+      "type": "string",
+      "title": "Material"
+    },
+    "measurements": {
+      "type": "object",
+      "title": "Measurements",
+      "properties": {
+        "length": {
+          "type": "string"
+        },
+        "width": {
+          "type": "string"
+        },
+        "height": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "string"
+        }
+      }
+    },
+    "purchase_price": {
+      "type": "number",
+      "title": "Purchase Price"
+    },
+    "estimated_value": {
+      "type": "number",
+      "title": "Estimated Value"
+    },
+    "sale_price": {
+      "type": "number",
+      "title": "Sale Price"
+    },
+    "storage_location": {
+      "type": "string",
+      "title": "Storage Location",
+      "enum": [
+        "Garage",
+        "Bedroom",
+        "Caravan",
+        "Sunshine Storage",
+        "Yarraville Storage"
+      ]
+    },
+    "container": {
+      "type": "string",
+      "title": "Container",
+      "description": "Container code (from a printed QR label) this item is assigned to"
+    },
+    "date_acquired": {
+      "type": "string",
+      "format": "date",
+      "title": "Date Acquired"
+    },
+    "date_listed": {
+      "type": "string",
+      "format": "date",
+      "title": "Date Listed"
+    },
+    "platform_listed": {
+      "type": "array",
+      "title": "Platform Listed",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Instagram",
+          "Facebook Pages",
+          "TikTok",
+          "eBay",
+          "Facebook Marketplace",
+          "Depop",
+          "Etsy",
+          "Shopify",
+          "Wix",
+          "Jose Loyal Website"
+        ]
+      }
+    },
+    "listing_url": {
+      "type": "string",
+      "title": "Listing URL"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "Unprocessed",
+        "Awaiting Photos",
+        "Ready To List",
+        "Listed",
+        "Sold",
+        "Shipped",
+        "Archived"
+      ],
+      "default": "Unprocessed"
+    },
+    "photos": {
+      "type": "array",
+      "title": "Photos",
+      "items": {
+        "type": "string"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes",
+      "format": "textarea"
+    },
+    "views": {
+      "type": "number",
+      "title": "View Count",
+      "default": 0
+    },
+    "featured": {
+      "type": "boolean",
+      "title": "Featured",
+      "default": false
+    },
+    "is_one_of_one": {
+      "type": "boolean",
+      "title": "One-of-One",
+      "default": true
+    }
+  },
+  "required": [
+    "title"
+  ]
+}

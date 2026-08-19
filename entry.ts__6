@@ -1,0 +1,128 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+
+function genOrderId() {
+  const d = new Date();
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `CO-${ymd}-${rand}`;
+}
+
+function buildEmail(record) {
+  const lines = [
+    `CUSTOM KICKS ORDER — ${record.order_id}`,
+    `Submitted: ${new Date().toLocaleString()}`,
+    ``,
+    `CUSTOMER`,
+    `Name: ${record.full_name}`,
+    `Email: ${record.email}`,
+    `Mobile: ${record.mobile}`,
+    record.instagram ? `Instagram: ${record.instagram}` : ``,
+    ``,
+    `SNEAKER`,
+    `Owns shoes: ${record.owns_shoes || "—"}`,
+  ];
+  if (record.owns_shoes === "No") {
+    lines.push(
+      `Brand: ${record.sneaker_brand || "—"}`,
+      `Model: ${record.sneaker_model || "—"}`,
+      `Size: ${record.sneaker_size || "—"}`,
+      `Gender: ${record.sneaker_gender || "—"}`,
+      `Preferred colour: ${record.preferred_colour || "—"}`
+    );
+  }
+  lines.push(
+    ``,
+    `DESIGN`,
+    `Styles: ${(record.design_styles || []).join(", ") || "—"}${record.other_style ? ` (${record.other_style})` : ""}`,
+    `Colours: ${(record.colour_preferences || []).join(", ") || "—"}${record.other_colours ? ` + ${record.other_colours}` : ""}`,
+    ``,
+    `DESCRIPTION`,
+    record.design_description || "—",
+    ``,
+    `BUDGET: ${record.budget || "—"}`,
+    `REQUIRED BY: ${record.required_date || "—"}${record.event_reason ? ` (${record.event_reason})` : ""}`,
+    `EXTRAS: ${(record.extras || []).join(", ") || "—"}`,
+    ``,
+    `SHIPPING: ${record.shipping_type || "—"}`,
+    record.shipping_address || ``,
+    ``,
+    `Inspiration images: ${(record.inspiration_images || []).length} attached`,
+    ...(record.inspiration_images || []).map((u, i) => `  ${i + 1}. ${u}`)
+  );
+  return lines.filter((l) => l !== undefined).join("\n");
+}
+
+export default async function(req) {
+  try {
+    const base44 = createClientFromRequest(req);
+    const body = await req.json();
+
+    // Honeypot — bots fill hidden fields
+    if (body.website) return Response.json({ error: "Submission rejected" }, { status: 400 });
+
+    // Validation
+    const missing = [];
+    if (!body.full_name || !String(body.full_name).trim()) missing.push("full_name");
+    if (!body.email || !String(body.email).trim()) missing.push("email");
+    if (!body.mobile || !String(body.mobile).trim()) missing.push("mobile");
+    if (missing.length) return Response.json({ error: "Please complete all required contact fields", fields: missing }, { status: 422 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email)) return Response.json({ error: "Please enter a valid email address" }, { status: 422 });
+    if (!body.design_description || !String(body.design_description).trim()) return Response.json({ error: "Please describe your design" }, { status: 422 });
+    if (!body.budget) return Response.json({ error: "Please select a budget" }, { status: 422 });
+    if (!body.shipping_type) return Response.json({ error: "Please select a shipping option" }, { status: 422 });
+    if (body.shipping_type && (!body.shipping_address || !String(body.shipping_address).trim())) return Response.json({ error: "Please enter a shipping address" }, { status: 422 });
+    if (!body.terms_accepted) return Response.json({ error: "You must accept the terms to continue" }, { status: 422 });
+    if (body.owns_shoes === "No" && (!body.sneaker_brand || !body.sneaker_size)) return Response.json({ error: "Please specify the sneaker brand and size" }, { status: 422 });
+
+    const order_id = genOrderId();
+    const record = {
+      order_id,
+      full_name: String(body.full_name).trim(),
+      email: String(body.email).trim(),
+      mobile: String(body.mobile).trim(),
+      instagram: body.instagram ? String(body.instagram).trim() : undefined,
+      owns_shoes: body.owns_shoes || undefined,
+      sneaker_brand: body.sneaker_brand ? String(body.sneaker_brand).trim() : undefined,
+      sneaker_model: body.sneaker_model ? String(body.sneaker_model).trim() : undefined,
+      sneaker_size: body.sneaker_size ? String(body.sneaker_size).trim() : undefined,
+      sneaker_gender: body.sneaker_gender || undefined,
+      preferred_colour: body.preferred_colour ? String(body.preferred_colour).trim() : undefined,
+      design_styles: Array.isArray(body.design_styles) ? body.design_styles : [],
+      other_style: body.other_style ? String(body.other_style).trim() : undefined,
+      colour_preferences: Array.isArray(body.colour_preferences) ? body.colour_preferences : [],
+      other_colours: body.other_colours ? String(body.other_colours).trim() : undefined,
+      inspiration_images: (Array.isArray(body.inspiration_images) ? body.inspiration_images : []).slice(0, 10),
+      design_description: String(body.design_description).trim(),
+      budget: body.budget || undefined,
+      required_date: body.required_date || undefined,
+      event_reason: body.event_reason ? String(body.event_reason).trim() : undefined,
+      extras: Array.isArray(body.extras) ? body.extras : [],
+      shipping_type: body.shipping_type || undefined,
+      shipping_address: body.shipping_address ? String(body.shipping_address).trim() : undefined,
+      terms_accepted: true,
+      status: "New"
+    };
+
+    await db.asServiceRole.entities.CustomOrder.create(record);
+
+    // Notify admins (registered users) — best-effort, never blocks the response
+    try {
+      const usersRes = await db.asServiceRole.entities.User.list();
+      const users = Array.isArray(usersRes) ? usersRes : (usersRes.data || []);
+      const admins = users.filter((u) => u.role === "admin" && u.email);
+      const subject = `New Custom Order ${order_id} — ${record.full_name}`;
+      const emailBody = buildEmail(record);
+      for (const a of admins) {
+        try {
+          await db.asServiceRole.integrations.Core.SendEmail({ to: a.email, subject, body: emailBody });
+        } catch (_) { /* individual admin failure ignored */ }
+      }
+    } catch (_) { /* email failure never blocks submission */ }
+
+    return Response.json({ success: true, order_id });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

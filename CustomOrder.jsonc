@@ -1,0 +1,161 @@
+{
+  "name": "CustomOrder",
+  "type": "object",
+  "properties": {
+    "order_id": {
+      "type": "string",
+      "title": "Order ID",
+      "description": "Auto-generated unique order reference"
+    },
+    "full_name": {
+      "type": "string",
+      "title": "Full Name"
+    },
+    "email": {
+      "type": "string",
+      "title": "Email Address"
+    },
+    "mobile": {
+      "type": "string",
+      "title": "Mobile Number"
+    },
+    "instagram": {
+      "type": "string",
+      "title": "Instagram Username"
+    },
+    "owns_shoes": {
+      "type": "string",
+      "title": "Owns Shoes",
+      "enum": [
+        "Yes",
+        "No"
+      ]
+    },
+    "sneaker_brand": {
+      "type": "string",
+      "title": "Sneaker Brand"
+    },
+    "sneaker_model": {
+      "type": "string",
+      "title": "Sneaker Model"
+    },
+    "sneaker_size": {
+      "type": "string",
+      "title": "Size (US/AU)"
+    },
+    "sneaker_gender": {
+      "type": "string",
+      "title": "Men's / Women's",
+      "enum": [
+        "Men's",
+        "Women's",
+        "Unisex"
+      ]
+    },
+    "preferred_colour": {
+      "type": "string",
+      "title": "Preferred Base Colour"
+    },
+    "design_styles": {
+      "type": "array",
+      "title": "Design Styles",
+      "items": {
+        "type": "string"
+      }
+    },
+    "other_style": {
+      "type": "string",
+      "title": "Other Style (detail)"
+    },
+    "colour_preferences": {
+      "type": "array",
+      "title": "Colour Preferences",
+      "items": {
+        "type": "string"
+      }
+    },
+    "other_colours": {
+      "type": "string",
+      "title": "Other / Specific Colours"
+    },
+    "inspiration_images": {
+      "type": "array",
+      "title": "Inspiration Images",
+      "items": {
+        "type": "string"
+      }
+    },
+    "design_description": {
+      "type": "string",
+      "title": "Design Description",
+      "format": "textarea"
+    },
+    "budget": {
+      "type": "string",
+      "title": "Budget",
+      "enum": [
+        "Under $300",
+        "$300\u2013500",
+        "$500\u2013800",
+        "$800+"
+      ]
+    },
+    "required_date": {
+      "type": "string",
+      "format": "date",
+      "title": "Required By Date"
+    },
+    "event_reason": {
+      "type": "string",
+      "title": "Event Reason"
+    },
+    "extras": {
+      "type": "array",
+      "title": "Extras",
+      "items": {
+        "type": "string"
+      }
+    },
+    "shipping_type": {
+      "type": "string",
+      "title": "Shipping",
+      "enum": [
+        "Australia",
+        "International"
+      ]
+    },
+    "shipping_address": {
+      "type": "string",
+      "title": "Shipping Address",
+      "format": "textarea"
+    },
+    "terms_accepted": {
+      "type": "boolean",
+      "title": "Terms Accepted"
+    },
+    "status": {
+      "type": "string",
+      "title": "Status",
+      "enum": [
+        "New",
+        "Reviewing",
+        "Awaiting Quote",
+        "Approved",
+        "In Progress",
+        "Completed",
+        "Shipped"
+      ],
+      "default": "New"
+    },
+    "admin_notes": {
+      "type": "string",
+      "title": "Admin Notes",
+      "format": "textarea"
+    }
+  },
+  "required": [
+    "full_name",
+    "email",
+    "mobile"
+  ]
+}

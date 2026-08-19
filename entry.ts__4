@@ -1,0 +1,101 @@
+const db = globalThis.__B44_DB__ || { auth:{ isAuthenticated: async()=>false, me: async()=>null }, entities:new Proxy({}, { get:()=>({ filter:async()=>[], get:async()=>null, create:async()=>({}), update:async()=>({}), delete:async()=>({}) }) }), integrations:{ Core:{ UploadFile:async()=>({ file_url:'' }) } } };
+
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.40';
+import { secrets } from 'base44:runtime';
+
+const PLATFORM_LABEL = { instagram: 'Instagram', facebook_pages: 'Facebook Pages' };
+
+function buildCaption(item, origin) {
+  const meta = [item.brand, item.condition_grade].filter(Boolean).join(' · ');
+  const price = item.sale_price != null ? `$${Number(item.sale_price).toLocaleString()}` : 'POA';
+  const link = `${origin}/product/${item.id}`;
+  return `${item.title}\n${meta}\n${price}\n\nOne-of-one — will not be restocked.\nView the archive: ${link}\n\n#notmanyifany #onetime #resale`;
+}
+
+async function publishInstagram(accessToken, item, origin) {
+  if (!item.photos?.length) throw new Error('Item has no photo — Instagram requires an image.');
+  const photo = item.photos[0];
+  const meRes = await fetch(`https://graph.instagram.com/me?fields=id&access_token=${accessToken}`);
+  const me = await meRes.json();
+  if (!me.id) throw new Error('Could not resolve Instagram account id.');
+  const caption = buildCaption(item, origin);
+  const containerRes = await fetch(`https://graph.instagram.com/v25.0/${me.id}/media`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_url: photo, caption, access_token: accessToken }),
+  });
+  const container = await containerRes.json();
+  if (container.error) throw new Error(container.error.message || 'Failed to create media container.');
+  const pubRes = await fetch(`https://graph.instagram.com/v25.0/${me.id}/media_publish`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: container.id, access_token: accessToken }),
+  });
+  const pub = await pubRes.json();
+  if (pub.error) throw new Error(pub.error.message || 'Failed to publish to Instagram.');
+  return { success: true, post_id: pub.id };
+}
+
+async function publishFacebook(accessToken, item, origin, pageId) {
+  if (!item.photos?.length) throw new Error('Item has no photo — Facebook requires an image.');
+  const photo = item.photos[0];
+  const accRes = await fetch(`https://graph.facebook.com/v25.0/me/accounts?fields=id,name,access_token&access_token=${accessToken}`);
+  const accs = await accRes.json();
+  const pages = accs.data || [];
+  if (!pages.length) throw new Error('No Facebook Page available to publish to.');
+  const page = pageId ? pages.find((p) => p.id === pageId) : pages[0];
+  if (!page) throw new Error('Selected Facebook Page not found.');
+  const caption = buildCaption(item, origin);
+  const postRes = await fetch(`https://graph.facebook.com/v25.0/${page.id}/photos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: photo, message: caption, access_token: page.access_token }),
+  });
+  const post = await postRes.json();
+  if (post.error) throw new Error(post.error.message || 'Failed to publish to Facebook.');
+  return { success: true, post_id: post.id, page: page.name };
+}
+
+export default async function(req) {
+  try {
+    const body = await req.json().catch(() => ({}));
+    const itemId = body.inventory_id;
+    const platforms = Array.isArray(body.platforms) ? body.platforms : [];
+    if (!itemId || !platforms.length) {
+      return Response.json({ error: 'inventory_id and platforms required' }, { status: 400 });
+    }
+    const origin = body.origin || new URL(req.headers.get('origin') || req.headers.get('referer') || 'https://app.db.com').origin;
+
+    const base44 = createClientFromRequest(req);
+    const item = await db.asServiceRole.entities.Inventory.get(itemId);
+    if (!item) return Response.json({ error: 'Item not found' }, { status: 404 });
+
+    const results = [];
+    const added = [];
+    for (const p of platforms) {
+      try {
+        const { accessToken } = await db.asServiceRole.connectors.getConnection(p);
+        let res;
+        if (p === 'instagram') res = await publishInstagram(accessToken, item, origin);
+        else if (p === 'facebook_pages') res = await publishFacebook(accessToken, item, origin, body.page_id);
+        else throw new Error('Unsupported platform: ' + p);
+        results.push({ platform: p, ...res });
+        added.push(PLATFORM_LABEL[p] || p);
+      } catch (e) {
+        console.error('publish error', p, e.message);
+        results.push({ platform: p, success: false, error: e.message });
+      }
+    }
+
+    if (added.length) {
+      const existing = Array.isArray(item.platform_listed) ? item.platform_listed : [];
+      const merged = [...new Set([...existing, ...added])];
+      await db.asServiceRole.entities.Inventory.update(itemId, { platform_listed: merged });
+    }
+
+    return Response.json({ results, updated: added.length > 0 });
+  } catch (error) {
+    console.error('publishInventoryListing error:', error.message);
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}

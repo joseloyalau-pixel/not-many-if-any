@@ -1,0 +1,49 @@
+{
+  "name": "ShippingRate",
+  "type": "object",
+  "properties": {
+    "service_name": {
+      "type": "string",
+      "title": "Service Name",
+      "description": "e.g. Standard, Express, International Standard"
+    },
+    "carrier": {
+      "type": "string",
+      "title": "Carrier",
+      "description": "e.g. Australia Post, Sendle, DHL, Manual"
+    },
+    "zone": {
+      "type": "string",
+      "title": "Zone",
+      "enum": [
+        "Domestic",
+        "International"
+      ],
+      "default": "Domestic"
+    },
+    "weight_kg_max": {
+      "type": "number",
+      "title": "Max Weight (kg)",
+      "description": "Upper weight bound this tier covers"
+    },
+    "price": {
+      "type": "number",
+      "title": "Price (AUD)"
+    },
+    "eta_days": {
+      "type": "string",
+      "title": "ETA",
+      "description": "e.g. 2-4 business days"
+    },
+    "tracking_url_template": {
+      "type": "string",
+      "title": "Tracking URL Template",
+      "description": "Use {tracking} as placeholder, e.g. https://auspost.com.au/mypost/track/#/details/{tracking}"
+    }
+  },
+  "required": [
+    "service_name",
+    "zone",
+    "price"
+  ]
+}
